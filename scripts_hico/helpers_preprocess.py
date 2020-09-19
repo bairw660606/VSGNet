@@ -24,6 +24,7 @@ OBJ_PATH_test_s= all_data_dir+'Object_Detections_hico/test/'
 with open(all_data_dir+'hico_infos/hico_list_obj.json') as fp:
     list_obj = json.load(fp)
 obj_list = dict([(value, int(key)-1) for key, value in list_obj.items()]) 
+#所有物品的类别，编号。组成字典
 
 VERB2ID={u'adjust': 0,
  u'assemble': 1,
@@ -158,7 +159,7 @@ def get_detections(segment_key,flag):
 
 	select_threshold=15
     elif flag=='test':
-	key_ann='%.8i'%(segment_key)
+	key_ann='%.8i'%(segment_key)#格式化输出吧
 	annotation = ANNOTATIONS_test[key_ann]
 	cur_obj_path_s = OBJ_PATH_test_s + "HICO_test2015_%.8i.json" % (segment_key)
 	SCORE_TH = 0.6
@@ -167,6 +168,7 @@ def get_detections(segment_key,flag):
 
     annotation = clean_up_annotation(annotation)
     with open(cur_obj_path_s) as fp:detections = json.load(fp)
+    #detections=[]列表表示
     
     img_H = detections['H']
     img_W = detections['W']
@@ -487,6 +489,7 @@ def dry_run():
         print("In testing set object detector failed to detect any person in {} images".format(len(bad_detections_test)))
         #import pdb;pdb.set_trace() 
         return bad_detections_train,bad_detections_test
+        #读取图片数据中没有检测到人的图片
 
 
 
