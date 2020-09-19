@@ -65,9 +65,9 @@ class ToTensor(object):
         	
         image = image.transpose((2, 0, 1))
        
-        return torch.from_numpy(image).float()
+        return torch.from_numpy(image).float()`
 
-
+#处理HICO数据，统一图片数据的命名格式
 class hico_Dataset(Dataset):
     
 
@@ -89,8 +89,9 @@ class hico_Dataset(Dataset):
 	if self.flag=='test':
 		img_pre_suffix='HICO_test2015_'+str(self.hico_frame[idx]).zfill(8)+'.jpg'
 	else:
-	       img_pre_suffix='HICO_train2015_'+str(self.hico_frame[idx]).zfill(8)+'.jpg'
-	all_labels=labels.get_compact_label(int(self.hico_frame[idx]),self.flag)
+	       img_pre_suffix='HICO_train2015_'+str(self.hico_frame[idx]).zfill(8)+'.jpg'#统一图片数据的命名格式
+	
+	all_labels=labels.get_compact_label(int(self.hico_frame[idx]),self.flag) #得到该张图片上所有的人物交互标签
 	labels_all=all_labels['labels_all']
 	labels_single=all_labels['labels_single']
         
