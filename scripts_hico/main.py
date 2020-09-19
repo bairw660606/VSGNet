@@ -37,6 +37,8 @@ torch.cuda.manual_seed_all(seed)
 def _init_fn(worker_id):
     np.random.seed(int(seed))
 
+#在神经网络中，参数默认是进行随机初始化的。不同的初始化参数往往会导致不同的结果，当得到比较好的结果时我们通常希望这个结果是可以复现的，在pytorch中，通过设置随机数种子也可以达到这么目的。
+
 
 ##### Arguments #######
 parser=argparse.ArgumentParser()
@@ -81,7 +83,7 @@ image_dir_test=all_data_dir+'Data_hico/test2015/'
 
 hico_train=hico_Dataset(annotation_train,image_dir_train,transform=transforms.Compose([Rescale((400,400)),ToTensor()]))
 hico_test=hico_Dataset(annotation_test,image_dir_test,transform=transforms.Compose([Rescale((400,400)),ToTensor()]))
-
+# 返回数据读取结果sample = {'image':image ,'labels_all':labels_all,'labels_single':labels_single,'image_id':self.hico_frame[idx]}
 
 #import pdb;pdb.set_trace()
 dataloader_train = DataLoader(hico_train, batch_size,
@@ -89,6 +91,7 @@ dataloader_train = DataLoader(hico_train, batch_size,
 dataloader_test = DataLoader(hico_test, batch_size,
                         shuffle=False,collate_fn=hico_collate,num_workers=24, worker_init_fn=_init_fn)#num_workers=batch_size
 dataloader={'train':dataloader_train,'test':dataloader_test}
+#[torch.stack(image),torch.cat(labels_all),torch.cat(labels_single),torch.stack(image_id),torch.stack(pairs_info)]
 
 
 
