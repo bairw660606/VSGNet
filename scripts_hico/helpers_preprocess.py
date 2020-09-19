@@ -168,14 +168,14 @@ def get_detections(segment_key,flag):
 
     annotation = clean_up_annotation(annotation)
     with open(cur_obj_path_s) as fp:detections = json.load(fp)
-    #detections=[]列表表示
+    #detections=[]列表表示，得到当前图片标注的检测结果
     
     img_H = detections['H']
     img_W = detections['W']
     shape=[img_W,img_H] 
-    persons_d, objects_d = analyze_detections(detections,SCORE_TH,SCORE_OBJ)
+    persons_d, objects_d = analyze_detections(detections,SCORE_TH,SCORE_OBJ)#分析检测到的对象分类得分是够大于预支
     d_p_boxes,scores_persons,class_id_humans = get_boxes_det(persons_d, img_H, img_W)
-    d_o_boxes,scores_objects,class_id_objects = get_boxes_det(objects_d, img_H, img_W)
+    d_o_boxes,scores_objects,class_id_objects = get_boxes_det(objects_d, img_H, img_W)#对图中所有的人和物进行编号
     
     try:
         d_o_boxes=np.concatenate([d_o_boxes,d_p_boxes]).tolist()
@@ -188,6 +188,7 @@ def get_detections(segment_key,flag):
         d_p_boxes,scores_persons,class_id_humans= d_p_boxes[0:select_threshold],scores_persons[0:select_threshold],class_id_humans[0:select_threshold]
     if len(d_o_boxes)>select_threshold:
         d_o_boxes,scores_objects,class_id_objects= d_o_boxes[0:select_threshold],scores_objects[0:select_threshold],class_id_objects[0:select_threshold]
+   #最多保留15个人和物的框
     
     #scores_objects.insert(0,1)
     return d_p_boxes,d_o_boxes,scores_persons,scores_objects,class_id_humans,class_id_objects,annotation,shape
@@ -237,27 +238,27 @@ def get_compact_label(segment_key,flag):
   
     d_p_boxes,d_o_boxes,scores_persons,scores_objects,class_id_humans,class_id_objects,annotation,shape=get_detections(segment_key,flag)
     
-    no_person_dets = len(d_p_boxes)
-    no_object_dets = len(d_o_boxes)
-    labels_np = np.zeros([no_person_dets, no_object_dets, NO_VERBS], np.int32) 
+    no_person_dets = len(d_p_boxes)#检测到人的个数 
+    no_object_dets = len(d_o_boxes)#检测到物的个数
+    labels_np = np.zeros([no_person_dets, no_object_dets, NO_VERBS], np.int32) #构建空矩阵形成人，物，动词的的三元组
     
     a_p_boxes = [ann['person_box'] for ann in annotation]
-    iou_mtx = get_iou_mtx(a_p_boxes, d_p_boxes)
+    iou_mtx = get_iou_mtx(a_p_boxes, d_p_boxes)#计算人的检测框与与标注框的IoU
 
     if no_person_dets != 0 and len(a_p_boxes)!=0:
-        max_iou_for_each_det = np.max(iou_mtx, axis=0)
-        index_for_each_det  = np.argmax(iou_mtx, axis=0)
+        max_iou_for_each_det = np.max(iou_mtx, axis=0)#取每一个检测结果与真值IoU的最大值
+        index_for_each_det  = np.argmax(iou_mtx, axis=0)#IoU最大值的编号
         for dd in range(no_person_dets):
-            cur_max_iou = max_iou_for_each_det[dd]
+            cur_max_iou = max_iou_for_each_det[dd]#判断与真值的IoU最大的检测框是否大于阈值，仅处理大于设置的MATCHING_IOU的检测框
             if cur_max_iou < MATCHING_IOU: 
                 continue
-            matched_ann = annotation[index_for_each_det[dd]]
+            matched_ann = annotation[index_for_each_det[dd]]#找到每个人的检测框对应的注释
             hoi_anns = matched_ann['hois']
             # verbs with actions######
-            object_hois = [oi for oi in hoi_anns if len(oi['obj_box']) != 0]
+            object_hois = [oi for oi in hoi_anns if len(oi['obj_box']) != 0]#判断注释中是否有交互行为
              
-            a_o_boxes = [oi['obj_box'] for oi in object_hois]
-            iou_mtx_o = get_iou_mtx(a_o_boxes, d_o_boxes)
+            a_o_boxes = [oi['obj_box'] for oi in object_hois]#得到对应的物的检测框
+            iou_mtx_o = get_iou_mtx(a_o_boxes, d_o_boxes)#取与真值的IoU最大的物体检测框
 
 
             if a_o_boxes and d_o_boxes:
@@ -267,16 +268,16 @@ def get_compact_label(segment_key,flag):
                     # enough iou
                     if cur_iou < MATCHING_IOU:
                         continue
-                    current_hoi = object_hois[ao]
-                    verb_idx = VERB2ID[current_hoi['verb']]
-                    labels_np[dd, do, verb_idx] = 1 
+                    current_hoi = object_hois[ao]#如果物体存在，且物体的IoU足够大，则认为存在这个人物交互行为
+                    verb_idx = VERB2ID[current_hoi['verb']] #确定动词
+                    labels_np[dd, do, verb_idx] = 1 #确定三元组标签成立
     
 
         comp_labels=labels_np.reshape(no_person_dets*(no_object_dets),NO_VERBS)
-        labels_single=np.array([1 if i.any()==True else 0 for i in comp_labels])
-        labels_single=labels_single.reshape(np.shape(labels_single)[0],1)
+        labels_single=np.array([1 if i.any()==True else 0 for i in comp_labels])#根据comp_labels，得到人与物的单个标签
+        labels_single=labels_single.reshape(np.shape(labels_single)[0],1)#类别与标签的矩阵变换
         return{'labels_all':labels_np,'labels_single':labels_single}
-    else:
+    else:#如果没有人，都是0了吧
         comp_labels=labels_np.reshape(no_person_dets*(no_object_dets+1),NO_VERBS)
         labels_single=np.array([1 if i.any()==True else 0 for i in comp_labels])
         labels_single=labels_single.reshape(np.shape(labels_single)[0],1)
@@ -396,17 +397,18 @@ def get_boxes_det(dets, img_H, img_W):
     scores=[]
     class_no=[]
     for det in dets:
-        top,left,bottom,right = det['box_coords']
+        top,left,bottom,right = det['box_coords']（左上，右下坐标）
 	scores.append(det['score'])
 	if len(det['class_str'].split())==2:
 	        #import pdb;pdb.set_trace()
 		str=det['class_str'].split()[0]+'_'+det['class_str'].split()[1]
 	else:
 		str=det['class_str']
+	#得到物体类别名称
 
 
 
-	class_no.append(int(obj_list[str]))
+	class_no.append(int(obj_list[str]))#得到类别编号列表
         #left, top, right, bottom = left*img_W, top*img_H, right*img_W, bottom*img_H
         left, top, right, bottom = left, top, right, bottom
         boxes.append([left,top,right,bottom])
@@ -430,6 +432,7 @@ def get_iou_mtx(anns, dets):
 
 
 def analyze_detections(detections,SCORE_TH,SCORE_OBJ):
+	#分析检测的分类得分是否大于阈值
     persons = []
     objects = []
     
@@ -502,7 +505,7 @@ if __name__ == "__main__":
     args=parser.parse_args()
     flag=args.type_of_data
     bad_detections_train,bad_detections_test=dry_run()
-    b_d_tr,b_d_test=[int(l) for l in bad_detections_train],[int(l) for l in bad_detections_test]
+    b_d_tr,b_d_test=[int(l) for l in bad_detections_train],[int(l) for l in bad_detections_test]#记录没有检测到人的图片编号
     phases=['train','test']
     from tqdm import tqdm
     #import pdb;pdb.set_trace()
@@ -516,9 +519,9 @@ if __name__ == "__main__":
 	    ALL_SEGS = [int(v) for v in ALL_SEGS]
 	    ALL_SEGS.sort()
 	    for segkey in tqdm(ALL_SEGS):
-                #import pdb;pdb.set_trace()
-	        if segkey in (b_d_tr+b_d_test):	
-		    new_anns[segkey] = get_compact_label(segkey,flag)
+                #import pdb;pdb.set_trace() #设置进度条
+	        if segkey in (b_d_tr+b_d_test):	#如果图片属于没有检测到人的图片
+		    new_anns[segkey] = get_compact_label(segkey,flag) #
 		    compact_dets[segkey] = get_compact_detections(segkey,flag)
 		    att_maps[segkey] = get_attention_maps(segkey,flag)
                     #import pdb;pdb.set_trace()
