@@ -22,7 +22,7 @@ def get_pool_loc(ims,image_id,flag_,size=(7,7), spatial_scale=1,batch_size=1):
 
     flag='train'
     max_pool=nn.AdaptiveMaxPool2d(size)
-    
+    #二元自适应均值汇聚层
     for batch in range(batch_size):
 	this_image=int(image_id[batch])
 	
@@ -33,21 +33,22 @@ def get_pool_loc(ims,image_id,flag_,size=(7,7), spatial_scale=1,batch_size=1):
 		flag='test'
 	
         a=helpers_pre.get_compact_detections(this_image,flag)	
-        roi_pers,roi_objs=a['person_bbx'],a['objects_bbx']
-        union_box=helpers_pre.get_attention_maps(this_image,flag)
+	#get_compact_detections(this_image,flag)  {'person_bbx':persons_np, 'objects_bbx':objects_np,'person_bbx_score':scores_persons,'objects_bbx_score':scores_objects,'class_id_objects':class_id_objects}
+        roi_pers,roi_objs=a['person_bbx'],a['objects_bbx'] 
+        union_box=helpers_pre.get_attention_maps(this_image,flag) #得到人物的联合框
 	union_box_out.append(torch.tensor(union_box).cuda().float())
         
         W,H,C=ims[batch].size()[1],ims[batch].size()[2],ims[batch].size()[0]
 	spatial_scale=[W,H,W,H]
 	image_this_batch=ims[batch]
-	roi_pers=roi_pers*spatial_scale
+	roi_pers=roi_pers*spatial_scale#框匹配到原始图像
         roi_objs=roi_objs*spatial_scale
         
         ##### Pooling Persons ##########
         for index,roi_val in enumerate (roi_pers):
 	    x1,y1,x2,y2=int(roi_val[0]),int(roi_val[1]),int(roi_val[2]),int(roi_val[3])
 	    sp=[x1,y1,x2,y2,x2-x1,y2-y1] 
-	    im = image_this_batch.narrow(0, 0, image_this_batch.size()[0])[..., y1:(y2+1), x1:(x2+1)]
+	    im = image_this_batch.narrow(0, 0, image_this_batch.size()[0])[..., y1:(y2+1), x1:(x2+1)]#一个batch的图像特征图，每个特征图的宽和高（y1:(y2+1), x1:(x2+1)）
             pooled=max_pool(im)
 	    pers_out.append((pooled))
 	    spatial_locs.append(sp)
