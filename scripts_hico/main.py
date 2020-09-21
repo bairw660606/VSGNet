@@ -123,6 +123,7 @@ for name, p in res.named_parameters():
 optim1 = optim.SGD([{"params":trainables,"lr":learning_rate},
 		    {"params":spmap,"lr":0.001}],
 		    momentum=0.9,weight_decay=0.0001)
+#网络不同部分设置不同的学习率
 #lambda1 = lambda epoch: 1.0 if epoch < 10 else (10 if epoch < 28 else 1) 
 lambda1 = lambda epoch: 1.0 if epoch < 10 else (0.1 if epoch < 28 else 1) 
 lambda2 = lambda epoch: 1
