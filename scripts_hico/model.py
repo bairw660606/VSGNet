@@ -84,7 +84,7 @@ class VSGNet(nn.Module):
 				    
 			     )
 		self.spmap_up=nn.Sequential(
-					nn.Linear(32,512),
+					nn.Linear(32,512),代码段 小部件
 					nn.ReLU(),
 					)
 	
@@ -219,7 +219,7 @@ class VSGNet(nn.Module):
         ############################
 	
 	
-	#### Making Essential Pairing##########
+	#### Making Essential Pairing##########仅考虑人物对
 	pairs,people,objects_only= ROI.pairing(out2_people,out2_objects,out2_context,spatial_locs,pairs_info)
 	####################################
         
