@@ -22,7 +22,7 @@ def get_pool_loc(ims,image_id,flag_,size=(7,7), spatial_scale=1,batch_size=1):
 
     flag='train'
     max_pool=nn.AdaptiveMaxPool2d(size)
-    #二元自适应均值汇聚层
+    #二元自适应均值汇聚层,最大池化，输出特征图尺寸仍为7×7，降维，将2048降为1024
     for batch in range(batch_size):
 	this_image=int(image_id[batch])
 	
